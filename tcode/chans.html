@@ -5,17 +5,15 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-.hider{
-  display: none;
-}
 .videoScaler{
   width:100%;
   max-height: 100%;
   max-width: 100%;
 }
 </style>
-<script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script> -->
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="viewport" content="initial-scale=1, maximum-scale=1">
 <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
@@ -26,133 +24,109 @@
 <title>HDHomeRun Chromecaster</title>
 
 </head>
+
 <body>
+
 <div class="container">
+
 <div class="page-header">
   <h1>HDHomeCast</h1>
-  <h3>Pick a channel, then click Stream or Cast!</h3>
-
+  <h3>Pick a channel, then click Stream!</h3>
 </div>
+
 <select id="chanSelect" class="form-control"></select>
- 
 
-<div id="hiderS" class="hider">
-<b id="statusH">Status: Not Playing</b><br>
-</div>
+<br><br>
 
-<div id="hider" class="hider">
-<b id="statusT">Time: </b><br>
-<div class="btn-group" role="group">
-<button type="button" id="pause" class="btn  btn-primary"><i class="fa fa-pause"></i></button>
-<button type="button" id="play" class="btn  btn-primary"><i class="fa fa-play"></i></button>
-<button type="button" id="Stop" class="btn  btn-warning"><i class="fa fa-stop"></i></button>
-</div>
-</div>
-<br>
-<br>
-<div id="hiderV" class="hider">
-<video id="vid1" controls class="videoScaler">
-</video>
+<div id="player">
+  <google-cast-launcher></google-cast-launcher>
+  <video id="vid" />
 </div>
 
-<br>
-<br>
+<script>
+window['__onGCastApiAvailable'] = function(isAvailable) {
+  if (isAvailable) {
+    initializeCastApi();
+  }
+};
+</script>
+
+<br><br>
+
 <center>
-<!--<div class="btn-group" role="group"> -->
-<button type="button" class="clickedCast btn  btn-primary">Cast</button> |
-<button type="button" class="clickedStream btn btn-info">Stream</button> 
-
-<!--</div> -->
+  <button type="button" class="clickedStream btn btn-info">Stream</button> 
 </center>
+
 </div>
+
 <script>
 String.prototype.toFormatted = function () {
-    var sec_num = parseInt(this, 10); // don't forget the second param
-    var hours   = Math.floor(sec_num / 3600);
-    var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-    var seconds = sec_num - (hours * 3600) - (minutes * 60);
+  var sec_num = parseInt(this, 10); // don't forget the second param
+  var hours   = Math.floor(sec_num / 3600);
+  var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+  var seconds = sec_num - (hours * 3600) - (minutes * 60);
 
-    if (hours   < 10) {hours   = "0"+hours;}
-    if (minutes < 10) {minutes = "0"+minutes;}
-    if (seconds < 10) {seconds = "0"+seconds;}
-    var time    = hours+':'+minutes+':'+seconds;
-    return time;
+  if (hours   < 10) {hours   = "0" + hours;}
+  if (minutes < 10) {minutes = "0" + minutes;}
+  if (seconds < 10) {seconds = "0" + seconds;}
+
+  var time = hours + ':' + minutes + ':' + seconds;
+
+  return time;
 }
 </script>
+
 <script>
+
+initializeCastApi = function() {
+  cast.framework.CastContext.getInstance().setOptions({
+    receiverApplicationId:
+      chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID
+  });
+};
+
 function sessionListener(e) {
   session = e;
-  window.currentSession=e;
-  if (session.media.length != 0) {
-    console.log("MediaDiscovered");
-    
-    //onMediaDiscovered('onRequestSessionSuccess', session.media[0]);
-  }
+  window.currentSession = e;
+  if (session.media.length != 0) { console.log("MediaDiscovered"); }
   session.addUpdateListener(sessionUpdateListener);
 }
 
 function sessionUpdateListener(isAlive) {
-  console.log("sessionUpdate: "+ isAlive.toString());
+  console.log("sessionUpdate: " + isAlive.toString());
   if (!isAlive) {
-      $("#statusH").text("Status: Stopped");
-      $("#hider").addClass("hider");
-      $("#hiderS").addClass("hider");
+    $("#statusH").text("Status: Stopped");
+
     if (window.gTimer) {
       clearInterval(window.gTimer);
     }
-
   }
 }
 
-function clickme(chan){
-    console.log("clk");
-    chrome.cast.requestSession(onRequestSessionSuccess, onLaunchError);
-}
-function receiverListener(e) {
-  if( e === chrome.cast.ReceiverAvailability.AVAILABLE) {
-    console.log("Available");
-  }
-}
 function onLaunchError(e){
-console.log("LaunchError");
-}
-window.curMedia="http://"+window.location.hostname+":"+window.location.port+"/out.m3u8"
-//window.curMedia="http://magmastone.net/nhl/proxy.php/nlds150.cdnak.neulion.com/nlds_vod/nhl/vod/2014/10/25/107/2_107_bos_tor_1415_h_whole_1_ipad.mp4.m3u8"
-//window.curMedia="http://nhl.cdnllnwnl.neulion.net/u/nhlmobile/vod/nhl/2014/10/25/107/2_107_bos_tor_1415_h_continuous_1_1600.mp4";
-function onRequestSessionSuccess(e) {
-      session = e;
-      window.currentSession=e;
-      session.addUpdateListener(sessionUpdateListener);
-var mediaInfo = new chrome.cast.media.MediaInfo(window.curMedia);
-  mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-  mediaInfo.metadata.metadataType = chrome.cast.media.MetadataType.GENERIC;
-mediaInfo.contentType = 'application/x-mpegURL';
-//mediaInfo.metadata.images = [{'url':"http://nhl.cdnllnwnl.neulion.net/u/www/thumbs/2014/10/25/653927_eb.jpg"}];
-var request = new chrome.cast.media.LoadRequest(mediaInfo);
-console.log("Requesting...")
-session.loadMedia(request,
-   onMediaDiscovered.bind(this, 'loadMedia'),
-   onMediaError);
-}
-function onMediaError(e){
-console.log(e);
-console.log("MediaError");
+  console.log("LaunchError");
 }
 
-var currentMediaSession=null;
-function onMediaDiscovered(how, media) {
-   window.currentMedia = media;
-   currentMediaSession=media
-   console.log("MediaDiscovered");
-   $("#hider").removeClass("hider");
-   $("#statusH").text("Status: "+currentMediaSession.playerState);
-   media.addUpdateListener(onMediaStatusUpdate);
+function onMediaError(e){
+  console.log(e);
+  console.log("MediaError");
 }
-window.progressFlag=1;
+
+var currentMediaSession = null;
+
+function onMediaDiscovered(how, media) {
+  window.currentMedia = media;
+  currentMediaSession = media
+  console.log("MediaDiscovered");
+  $("#statusH").text("Status: " + currentMediaSession.playerState);
+  media.addUpdateListener(onMediaStatusUpdate);
+}
+
+window.progressFlag = 1;
 
 function updateTime(){
-  s= currentMediaSession.getEstimatedTime().toString();
-        $("#statusT").text("Time: "+s.toFormatted());
+  s = currentMediaSession.getEstimatedTime().toString();
+  $("#statusT").text("Time: " + s.toFormatted());
 }
 
 function onMediaStatusUpdate(isAlive) {
@@ -163,151 +137,101 @@ function onMediaStatusUpdate(isAlive) {
   else {
     console.log(currentMediaSession.playerState);
     if (currentMediaSession.playerState == 'PLAYING') {
-      if(!window.gTimer){
-        window.gTimer=setInterval(updateTime,1000);
-        s=currentMediaSession.currentTime.toString();
-        $("#statusT").text("Time: "+s.toFormatted());
-        //document.getElementById('playpauseresume').innerHTML = 'Pause';
-    }else{
-      clearInterval(window.gTimer);
-      window.gTimer=setInterval(updateTime,1000);
-    }
+      if (!window.gTimer) {
+        window.gTimer = setInterval(updateTime,1000);
+        s = currentMediaSession.currentTime.toString();
+        $("#statusT").text("Time: " + s.toFormatted());
+      } else {
+        clearInterval(window.gTimer);
+        window.gTimer = setInterval(updateTime,1000);
+      }
     }
   }
-  $("#statusH").text("Status: "+currentMediaSession.playerState);
+  $("#statusH").text("Status: " + currentMediaSession.playerState);
 }
 
-function OnMediaError(e){
-console.log("MediaError");
-}
-function onError(e){
-console.log("Error");
-}
-function onInitSuccess(e){
-console.log("Initted")
-}
-initializeCastApi = function() {
-  var sessionRequest = new chrome.cast.SessionRequest(chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID);
-  var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
-    sessionListener,
-    receiverListener);
-  chrome.cast.initialize(apiConfig, onInitSuccess, onError);
-};
-
-window['__onGCastApiAvailable'] = function(loaded, errorInfo) {
-  if (loaded) {
-    initializeCastApi();
-  } else {
-    console.log(errorInfo);
-  }
-}
+function OnMediaError(e)  { console.log("MediaError");  }
+function onError(e)       { console.log("Error");       }
+function onInitSuccess(e) { console.log("InitSuccess"); }
 </script>
 
-
 <script>
-function checkStream(){
-        $.get("http://"+window.location.hostname+":"+window.location.port+"/out.m3u8").fail(function(){
-            setTimeout(checkStream,1000);
-        }).done(function(){
-           clearInterval(window.dots);
-            if(window.typeS=="cast"){
-                clickme("cast");
-            }else if (window.typeS=="web"){
-                $("#hiderV").removeClass("hider");
-                $("#vid1").attr("src","/out.m3u8")
-                $("#vid1").get(0).play();
-                setTimeout($("#vid1").get(0).play,400);
-                setTimeout($("#vid1").get(0).play,1000);
-                //window.location.href="http://"+window.location.hostname+":"+window.location.port+"/out.m3u8"
-            }else{
-              var vlc = document.getElementById("vlc");
-              var it=vlc.playlist.add("http://"+window.location.hostname+":"+window.location.port+"/out.m3u8");
-              vlc.playlist.playItem(it);
-            }
-        });
+function checkStream() {
+  $.get("http://" + window.location.hostname + ":" + window.location.port + "/out.m3u8").fail(function() {
+    setTimeout(checkStream,1000);
+  }).done(function() {
+    clearInterval(window.dots);
+      var video = document.getElementById('vid');
+      
+
+
+      // if (Hls.isSupported()) {
+      //   var hls = new Hls();
+      //   hls.loadSource('/out.m3u8');
+      //   hls.attachMedia(video);
+      //   hls.on(Hls.Events.MANIFEST_PARSED,function() {
+      //     video.play();
+      //   });
+      // }
+  });
 }
-window.numdots=1
-function dotdotdot(){
-  if(window.numdots > 4){
-    window.numdots=1;
-  }else{
-    window.numdots=window.numdots+1
+
+window.numdots = 1;
+
+function dotdotdot() {
+  if (window.numdots > 4) {
+    window.numdots = 1;
+  } else {
+    window.numdots = window.numdots + 1
   }
-  mainS="Status: Waiting";
+  mainS = "Status: Waiting";
   for (var i = 0; i < window.numdots; i++) {
-    mainS=mainS+"."
+    mainS = mainS + "."
   };
   $("#statusH").text(mainS);
 }
-$(document).ready(function(){
-  $("#Stop").click(function(){
-    window.currentSession.stop(function(){
-      $("#hider").addClass("hider");
-      $("#hiderS").addClass("hider");
 
-    },function(){});
-  });
-  $("#pause").click(function(){
-    window.currentMedia.pause();
-  });
-  $("#play").click(function(){
-    window.currentMedia.play();
-  });
-$.get("/ip.txt").done(function(hdmr){
-  window.ip=hdmr;
-  $.getJSON("/canada.json").done(function(dataStn){
-   $.getJSON("http://"+window.ip+"/lineup.json").done(function(data){
-    for (var i = data.length - 1; i >= 0; i--) {
-      z=data[i]["GuideNumber"].split(".");
-      chanIdent=data[i]["GuideName"].split("-");
-      chanChan="Unknown"
-      chanNum=data[i]["GuideNumber"];
-      if(chanIdent[0][0]=="C"){
-        chanChan=dataStn[chanIdent[0]];
-      }else if(chanIdent[0][0]=="W" || chanIdent[0][0]=="K"){
-        $.ajax({
-    type: 'GET',
-    url: 'http://jsonp.afeld.me/?url=https://data.fcc.gov/mediabureau/v01/tv/facility/search/'+chanIdent[0]+'.json',
-    dataType: 'json',
-    success: function(dat) {chanChan=dat["results"]["searchList"][0]["facilityList"][0]["networkAfil"];},
-    data: {},
-    async: false
-        });
-      }
-      toadd="<option value='"+z[0]+"_"+z[1]+"'>"+chanNum+" - "+data[i]["GuideName"]+" - "+chanChan+"</option>";
-      $("#chanSelect").append(toadd);
-    };
-   });
-  });
-
-    $(".clickedCast").click(function(){
-        $("#hiderS").removeClass("hider");
-        window.dots=setInterval(dotdotdot,100);
-        chan=$("#chanSelect").val();
-        console.log($(this).attr("chan"));
-        $.get("http://"+window.location.hostname+":"+window.location.port+"/?chan="+chan)
-        window.typeS="cast"
-        setTimeout(checkStream,1000);
-
-    });
-    $(".clickedStream").click(function(){
-        chan=$("#chanSelect").val();
-        $("#hiderS").removeClass("hider");
-        window.dots=setInterval(dotdotdot,100);
-        $.get("http://"+window.location.hostname+":"+window.location.port+"/?chan="+chan)
-        window.typeS="web"
-        setTimeout(checkStream,1000);
-        console.log($(this).attr("chan"));
+$(document).ready(function() {
+  $.get("/ip.txt").done(function(hdmr) {
+    window.ip = hdmr;
+    $.getJSON("/canada.json").done(function(dataStn) {
+      $.getJSON("http://" + window.ip + "/lineup.json").done(function(data) {
+        for (var i = data.length - 1; i >= 0; i--) {
+          z = data[i]["GuideNumber"].split(".");
+          chanIdent = data[i]["GuideName"].split("-");
+          chanChan = "Unknown"
+          chanNum = data[i]["GuideNumber"];
+          if (chanIdent[0][0] == "C") {
+            chanChan = dataStn[chanIdent[0]];
+          } else if (chanIdent[0][0] == "W" || chanIdent[0][0] == "K") {
+            $.ajax( {
+              type: 'GET',
+              url: 'http://jsonp.afeld.me/?url=https://data.fcc.gov/mediabureau/v01/tv/facility/search/' + chanIdent[0] + '.json',
+              dataType: 'json',
+              success: function(dat) {chanChan = dat["results"]["searchList"][0]["facilityList"][0]["networkAfil"];},
+              data: {},
+              async: false
+            });
+          }
+          toadd = "<option value='" + z[0] + "_" + z[1] + "'>" + chanNum + " - " + data[i]["GuideName"] + " - " + chanChan + "</option>";
+          $("#chanSelect").append(toadd);
+        };
+      });
     });
 
-});
+    $(".clickedStream").click(function() {
+      chan = $("#chanSelect").val();
+      window.dots = setInterval(dotdotdot,100);
+      $.get("http://" + window.location.hostname + ":" + window.location.port + "/?chan=" + chan)
+      window.typeS = "web"
+      setTimeout(checkStream,1000);
+      console.log("chan: " + chan);
+    });
+  });
 });
 </script>
-<br>
-<br>
+
+<br><br>
 
 </body>
-
-
-
 </html>
